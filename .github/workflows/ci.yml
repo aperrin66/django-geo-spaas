@@ -1,0 +1,59 @@
+---
+name: "Unit tests and build"
+on:
+  push:
+    branches: ['**']
+  release:
+    types: [prereleased, released]
+jobs:
+  tests_and_docker_builds:
+    strategy:
+      matrix:
+        image_name: ["${{ vars.DOCKER_ORG }}/geospaas"]
+        tag_suffix:
+          - ''
+          - '-slim'
+        version:
+          - {'python': '3.7', 'latest': false}
+          - {'python': '3.8', 'latest': false}
+          - {'python': '3.9', 'latest': false}
+          - {'python': '3.10', 'latest': false}
+          - {'python': '3.11', 'latest': true}
+    uses: ./.github/workflows/test_and_docker_build.yml
+    with:
+      base_image: "${{ vars.DOCKER_ORG }}/nansat:0.0.9${{ matrix.tag_suffix }}-python${{ matrix.version.python }}"
+      target_image_tags: |
+        ${{ matrix.image_name }}:${{ github.ref_name }}${{ matrix.tag_suffix }}-python${{ matrix.version.python }}
+        ${{ matrix.image_name }}:latest${{ matrix.tag_suffix }}-python${{ matrix.version.python }}
+        ${{ matrix.version.latest && format('{0}:latest{1}', matrix.image_name, matrix.tag_suffix) || '' }}
+    secrets: inherit
+
+
+  publish_python_package:
+    name: Publish the Python package to PyPI
+    runs-on: 'ubuntu-latest'
+    needs: 'tests_and_docker_builds'
+    if: github.event_name == 'release'
+    steps:
+      - name: 'Checkout repository'
+        uses: actions/checkout@v2
+
+      - name: Set up Python 3.7
+        uses: actions/setup-python@v1
+        with:
+          python-version: 3.7
+
+      - name: Build package
+        run: >
+             DJANGO_GEO_SPAAS_RELEASE="${{ github.ref_name }}"
+             python setup.py sdist
+        shell: bash
+
+      - name: Publish
+        uses: pypa/gh-action-pypi-publish@release/v1
+        with:
+          # Storing the PyPI URL in the repositories' secrets makes
+          # publishing to the test PyPI from forks easy
+          repository_url: ${{ vars.PYPI_REPOSITORY_URL }}
+          password: ${{ secrets.PYPI_TOKEN }}
+...
