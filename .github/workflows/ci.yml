@@ -21,7 +21,7 @@ jobs:
           - {'python': '3.11', 'latest': true}
     uses: ./.github/workflows/test_and_docker_build.yml
     with:
-      base_image: "${{ vars.DOCKER_ORG }}/nansat:0.0.9${{ matrix.tag_suffix }}-python${{ matrix.version.python }}"
+      base_image: "${{ vars.DOCKER_ORG }}/nansat:0.0.10${{ matrix.tag_suffix }}-python${{ matrix.version.python }}"
       target_image_tags: |
         ${{ matrix.image_name }}:${{ github.ref_name }}${{ matrix.tag_suffix }}-python${{ matrix.version.python }}
         ${{ matrix.image_name }}:latest${{ matrix.tag_suffix }}-python${{ matrix.version.python }}
